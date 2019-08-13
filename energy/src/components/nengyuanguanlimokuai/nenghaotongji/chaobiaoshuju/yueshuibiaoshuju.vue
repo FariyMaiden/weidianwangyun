@@ -1,0 +1,455 @@
+<template>
+<!-- 实时监测-》用水查询(月查询数据) -->
+    <div class="bigbox">
+
+           <div>
+        <el-button @click="ribtn">日用水查询</el-button>
+        
+        </div>
+        <div class="style1">
+
+            用户类别：
+              
+            <el-select v-model="tiaojianchaxun.userCategory" placeholder="请选择用户类别">
+                          <el-option
+                          v-for="item in userCategoryArr"
+                          :key="item.value"
+                          :label="item.label"
+                          :value="item.value">
+                          </el-option>
+            </el-select> 
+
+            区域：
+            <el-cascader
+                :options="options"
+                :props="{ checkStrictly: true }"
+                placeholder="请选择水表区域"
+                clearable
+                class="selstyle"
+                v-model="optionsValue">
+            </el-cascader>
+         
+            用户名称：
+            <el-input class="selstyle"  
+            placeholder="请输入用户名称" 
+            style="width:300px"
+            v-model="tiaojianchaxun.userName"
+            ></el-input>
+       
+          <div style="marginTop:10px;marginBottom:10px">
+            
+              时间：&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                  <el-date-picker
+                    v-model="tiaojianchaxun.date"
+                    type="month"
+                    placeholder="选择月"
+                    value-format="yyyy-MM">
+                    </el-date-picker>
+          </div>
+          
+                 
+         </div>
+
+        <div class="style1">
+           
+            
+                    <div class="tiaojianchaxun">
+                         <el-button type="primary" icon="el-icon-setting" @click="chongzhi">重置</el-button>
+                         <el-button type="primary" icon="el-icon-search" @click="search">搜索</el-button>   
+
+                    </div>                        
+        </div>
+
+          <div>
+                <!--   展示信息  -->
+                 <el-table
+                    :data="getTablexinxi"
+                    border
+                    style="width: 100%"
+                    :header-cell-style="getRowClass"
+                    >
+                    <el-table-column
+                    v-for="(item,index) in tableHead" 
+                    :key="index"
+                    :prop="item.id"
+                    :label="item.lable"
+                   >              
+                    </el-table-column>              
+                </el-table>
+
+                
+                  <!-- 分页 -->
+              <div class='fengyeanniu'>
+                <el-pagination                   
+                      @current-change="handleCurrentChange"
+                      :current-page="currentPage"
+                      layout="total, prev, pager, next, jumper"
+                      :total="total">
+                    </el-pagination>
+              </div>
+
+            </div>
+
+    </div>
+</template>
+
+<script>
+    export default {
+        data(){
+            return{
+              addheight:'',
+             
+              //获取到的区域树结构数据
+              options: [],
+              optionsValue:[],
+            
+
+          
+                // 按条件查询定义变量
+                tiaojianchaxun:{
+                  regionId:null,//水表区域
+                  userName:'',//条件查询用户名称
+                  countPoint:'',//用户名称（原计量点）
+                  date:'',//查询日期 
+                  flag: '',//查询的数据类型 
+                  userCategory:'',//用户类别
+                },
+                tiaojianpage:1,
+                userCategoryArr:[],//用户类别数据
+
+                tableHead:[
+
+                {
+                  lable:'用户名称',
+                  id:'userName'
+                },
+                 {
+                  lable:'表号',
+                  id:'meterCode'
+                },
+                {
+                    lable:'区域位置',
+                    id:'location'
+                },
+                {
+                    lable:'用户类别',
+                    id:'userCategory'
+                },
+                {
+                  lable:'用水量/t',
+                  id:'value'  
+                },
+                {
+                  lable:'水费/元',
+                  id:'fee'
+                }
+               
+                // {
+                //   lable:'型号',
+                //   id:'meterMode'
+                // },
+               
+                // {
+                //   lable:'时间',
+                //   id:'readTime'
+                // },               
+               
+                //  {
+                //   lable:'用水费/元',
+                //   id:''  
+                // }
+              
+                // {
+                //   lable:'时间',
+                //   id:'readTime'
+                // },             
+                // {
+                //   lable:'设备编号',
+                //   id:'meterAddress'
+                // },
+                // {
+                //   lable:'设备名称',
+                //   id:'meterName'
+                // },            
+              ],
+
+            getTablexinxi: [],//获取到的信息表格
+
+            currentPage:1,//页码
+            total:0,//条总数
+          
+          
+            }
+
+        },
+
+         created() {
+           this.addheight = screen.height - screen.height / 5.57 + "px";
+          this.huoququyushu();
+          this.getyonghuleibei();
+           
+
+        },
+        methods: {
+             //跳转到日用电查询上
+            ribtn(){
+                this.$router.push('/shuibiaoshuju')
+            },
+          
+                // 获取用户类别（条件查询使用）
+            getyonghuleibei(){
+                this.$axios({
+                   method:'GET',
+                   url:this.api.baseUrl + this.api.sysselect + '/5',
+                   type:'json'
+               }).then(response=>{
+                   console.log(response)
+                    if(response.data.success === true){
+                    this.userCategoryArr = response.data.data
+                }
+               }).catch(err=>{
+                   console.log(err)
+               })
+
+            },
+            // 递归方法
+            getTreeData(data){
+                // 循环遍历json数据
+                for(var i=0;i<data.length;i++){
+                    
+                    if(data[i].children.length<1){
+                        // children若为空数组，则将children设为undefined
+                        data[i].children=undefined;
+                    }else {
+                        // children若不为空数组，则继续 递归调用 本方法
+                        this.getTreeData(data[i].children);
+                    }
+                }
+                return data;},
+          //获取区域树
+          huoququyushu(){
+               this.$axios({
+             method:'GET',
+             url:this.api.baseUrl + this.api.sysregiontree+'/0',
+             type:'json'
+           }).then(response=>{
+             console.log(response)
+             if(response.data.success === true){
+               console.log(response.data.data)
+               this.options = response.data.data
+               this.getTreeData(this.options)
+               console.log(this.options)
+             }
+           }).catch(err=>{
+             console.log(err)
+           })
+
+
+          },
+             
+
+               // 分页控件
+            handleCurrentChange(val) {
+        console.log(`当前页: ${val}`);
+        this.searchshuzi(val);
+      },
+             //按数字查询的搜索按钮
+            searchshuzi(val){   
+
+                let params = this.tiaojianchaxun  
+                    params.regionId = this.optionsValue[this.optionsValue.length-1]
+                  console.log(this.tiaojianchaxun.regionId)
+                  console.log('按页面数字查询')
+                params.page =val
+                params.rows = 10
+                console.log(params)
+                this.$axios({
+                    method:'GET',
+                    url:this.api.baseUrl + this.api.watermonth,
+                    params:params,
+                    type:'json'
+                }).then(response=>{
+                   console.log(response)
+               
+                if(response.data.success === true){
+
+                this.total = response.data.data.total
+                this.getTablexinxi = []                    
+                for(let i = 0; i < response.data.data.list.length; i++){
+                    this.getTablexinxi.push(response.data.data.list[i])
+                }    
+                if( this.getTablexinxi.length === 0){
+                   this.$message('查询成功，但是没有数据哦')
+                   
+                }
+                     this.optionsValue = []
+                      this.huoqushu();
+                  
+                    }
+              
+                }).catch(err=>{
+                    console.log(err)
+                })
+                              
+              
+            },
+
+
+               //更改表头颜色
+            getRowClass({ row, column, rowIndex, columnIndex }) {
+                if (rowIndex == 0) {
+                        return 'background:#a0cfff'
+                } else {
+                        return ''
+                }
+            },
+
+               //重置清空条件查询框
+            chongzhi(){
+                for(let key in this.tiaojianchaxun){
+                    this.tiaojianchaxun[key]  = ''
+                }
+                this.optionsValue = []
+                 this.huoququyushu();
+            },
+
+                //按条件查询的搜索按钮
+            search(){   
+                console.log(this.optionsValue)
+                if(this.tiaojianchaxun.date === ''){
+                  window.alert('查询日期不能为空哦~')
+
+                }else{
+
+                let params = this.tiaojianchaxun  
+                if(this.optionsValue.length === 0){
+                  this.currentPage = 1;
+                  console.log('第二次以上调用了吗')
+                params.page = this.currentPage
+                params.rows = 10
+                console.log(params)
+                this.$axios({
+                    method:'GET',
+                    url:this.api.baseUrl + this.api.watermonth,
+                    params:params,
+                    type:'json'
+                }).then(response=>{
+                   console.log(response)
+               
+                if(response.data.success === true){
+                   
+                   this.total = response.data.data.total
+                this.getTablexinxi = []                    
+                for(let i = 0; i < response.data.data.list.length; i++){
+                    this.getTablexinxi.push(response.data.data.list[i])
+                }    
+                  if( this.getTablexinxi.length === 0){
+                   this.$message('查询成功，但是没有数据哦')
+                   
+                }
+                     this.optionsValue = []
+                       this.huoququyushu();
+                    }
+                  
+
+                }).catch(err=>{
+                    console.log(err)
+                })
+                              
+                }else if(this.optionsValue !== []){
+                  this.currentPage = 1;
+                  console.log('第一次调用')             
+                // params.regionId =  this.optionsValue.pop() 
+                params.regionId = this.optionsValue[this.optionsValue.length-1]
+                params.page =  this.currentPage
+                params.rows = 10
+                
+                console.log(params)
+                this.$axios({
+                    method:'GET',
+                    url:this.api.baseUrl + this.api.watermonth,
+                    params:params,
+                    type:'json'
+                }).then(response=>{
+                   console.log(response)
+               
+                if(response.data.success === true){
+                  
+                  this.total = response.data.data.total 
+                this.getTablexinxi = []                    
+                for(let i = 0; i < response.data.data.list.length; i++){
+                    this.getTablexinxi.push(response.data.data.list[i])
+                }    
+                  if( this.getTablexinxi.length === 0){
+                   this.$message('查询成功，但是没有数据哦')
+                   
+                }
+                     this.optionsValue = []
+                      this.huoququyushu();
+                    console.log( this.regionId)
+                    }
+                  
+
+                }).catch(err=>{
+                    console.log(err)
+                })
+                              
+                }                                           
+                           
+                }
+            },
+        },
+    }
+</script>
+
+<style>
+.tiaojianchaxun{
+    margin-top:2%; 
+    margin-bottom: 1%;
+}
+.fengyeanniu{
+  margin-top:1%;
+  margin-left:35%;
+}
+.bigbox{
+   float: left;
+   margin-left: 2%;
+   width:100%;
+}
+.style1{
+  margin-top: 2%;
+}
+.style3{
+  margin-top: 5px;
+  margin-left: 5.5%;
+}
+.style4{
+  margin-top: 15px;
+  margin-left: 5.5%;
+}
+
+.msgcenter{
+  margin-top: 10%;
+  margin-bottom: 10%;
+  text-align: center;
+}
+.selstyle{
+    width:15%;
+    margin-right: 20px;
+  }
+.aligncenter{
+  margin:0 auto;
+  width:80%;
+  height:100%;
+}
+.inputstyle{
+
+  width:30%;
+  border: 0 none;
+  border-style: none;
+  outline: none;
+}
+.style2{
+  margin-left: 20px;
+}
+</style>

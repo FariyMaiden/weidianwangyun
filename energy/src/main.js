@@ -1,29 +1,81 @@
-// The Vue build version to load with the `import` command
-// (runtime-only or standalone) has been set in webpack.base.conf with an alias.
 import Vue from 'vue'
-import App from './App'
+import App from './App.vue'
 import router from './router'
-import ElementUI from 'element-ui'
-import 'element-ui/lib/theme-chalk/index.css';
-import axios from 'axios'
+import axios from 'axios';
+import ElementUI from 'element-ui';
+import VueI18n from 'vue-i18n';
+import { messages } from './components/common/i18n';
+import 'element-ui/lib/theme-chalk/index.css'; // 默认主题
+// import '../static/css/theme-green/index.css';       // 浅绿色主题
+import './assets/css/icon.css';
+import './components/common/directives';
+import "babel-polyfill";
+
+import './resources/root'
 import echarts from 'echarts'
-import "babel-polyfill" // es6适用于ie9以上的操作
-
-Vue.use(echarts)
 Vue.prototype.$echarts = echarts //图表使用引入
-Vue.prototype.$axios = axios //全局注册，使用方法为:this.$axios
-Vue.use(ElementUI)
+
+
 Vue.config.productionTip = false
+Vue.use(VueI18n);
+Vue.use(ElementUI, {
+    size: 'small'
+});
+Vue.prototype.$axios = axios;
 
-
-
-/* eslint-disable no-new */
-new Vue({
-  el: '#app',
-  router,
-
-  components: {
-    App
-  },
-  template: '<App/>'
+const i18n = new VueI18n({
+    locale: 'zh',
+    messages
 })
+
+
+
+
+//限制登录
+router.beforeEach((to, from, next) => {
+  // console.log('XXXX'+JSON.stringify(to))
+
+  if (to.meta.requireAuth) { // 判断该路由是否需要登录权限
+    if (window.sessionStorage.getItem("isLogin")) { // 通过vuex state获取当前的token是否存在
+       console.log('已登录')
+      next();
+    } else {
+       console.log('未登录')
+      next({
+        path: '/',
+        query: {
+          redirect: to.fullPath
+        } // 将跳转的路由path作为参数，登录成功后跳转到该路由
+      })
+    }
+  } else {
+    next();
+  }
+})
+
+//使用钩子函数对路由进行权限跳转
+// router.beforeEach((to, from, next) => {
+//     const role = localStorage.getItem('ms_username');
+//     if (!role && to.path !== '/login') {
+//         next('/login');
+//     } else if (to.meta.permission) {
+//         // 如果是管理员权限则可进入，这里只是简单的模拟管理员权限而已
+//         role === 'admin' ? next() : next('/403');
+//     } else {
+//         // 简单的判断IE10及以下不进入富文本编辑器，该组件不兼容
+//         if (navigator.userAgent.indexOf('MSIE') > -1 && to.path === '/editor') {
+//             Vue.prototype.$alert('vue-quill-editor组件不兼容IE10及以下浏览器，请使用更高版本的浏览器查看', '浏览器不兼容通知', {
+//                 confirmButtonText: '确定'
+//             });
+//         } else {
+//             next();
+//         }
+//     }
+// })
+
+
+new Vue({
+    router,
+    i18n,
+    render: h => h(App)
+}).$mount('#app')
